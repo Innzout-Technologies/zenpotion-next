@@ -1,0 +1,47 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-brand-dark: #1a2e1a;
+  --color-brand-mid: #5a7a4e;
+  --color-brand-light: #a8d5a2;
+  --color-bg: #f8f5ef;
+  --color-text: #1a2e1a;
+  --color-muted: #4a5c44;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth scroll snap for major sections if desired */
+::selection {
+  background: var(--color-brand-light);
+  color: var(--color-brand-dark);
+}
+
+/* Hide scrollbar while keeping functionality (optional) */
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
