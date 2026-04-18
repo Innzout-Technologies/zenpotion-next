@@ -121,41 +121,86 @@ export default function ParallaxSection() {
         style={{ y: fgY, scale: fgScale }}
         className="absolute inset-0 z-20 flex flex-col items-center justify-center"
       >
-        {/* Bottle */}
+        {/* Plenish-style bottle */}
         <div className="relative">
+          {/* Glow behind bottle */}
           <div
-            className="w-36 h-[330px] md:w-44 md:h-[380px] rounded-[70px] flex flex-col items-center justify-center relative overflow-hidden shadow-2xl"
-            style={{
-              background: 'linear-gradient(160deg, #d4edda 0%, #a8d5a2 40%, #6ba368 100%)',
-            }}
+            className="absolute -inset-8 -z-10 rounded-full"
+            style={{ background: 'radial-gradient(ellipse, rgba(90,122,78,0.3) 0%, transparent 65%)' }}
+          />
+
+          <div
+            className="relative w-36 md:w-48"
+            style={{ filter: 'drop-shadow(0 20px 36px rgba(26,46,26,0.30))' }}
           >
+            <svg viewBox="0 0 280 320" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
+              <defs>
+                <linearGradient id="psBg" x1="0" y1="88" x2="280" y2="320" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"  stopColor="#daf0d6" />
+                  <stop offset="40%" stopColor="#8fc98a" />
+                  <stop offset="100%" stopColor="#3a5835" />
+                </linearGradient>
+                <linearGradient id="psGloss" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"  stopColor="white" stopOpacity="0.55" />
+                  <stop offset="80%" stopColor="white" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="psCap" x1="140" y1="4" x2="140" y2="88" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"  stopColor="#ffffff" stopOpacity="0.9" />
+                  <stop offset="55%" stopColor="#e8e6e2" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="#b0aca6" stopOpacity="0.35" />
+                </linearGradient>
+                <clipPath id="psClip">
+                  <path d="M74,88 L74,118 C74,156 12,152 12,156 L12,290 Q12,312 34,312 L246,312 Q268,312 268,290 L268,156 C268,152 206,156 206,118 L206,88 Z" />
+                </clipPath>
+              </defs>
+
+              {/* Body (shoulder + barrel) */}
+              <path
+                d="M74,88 L74,118 C74,156 12,152 12,156 L12,290 Q12,312 34,312 L246,312 Q268,312 268,290 L268,156 C268,152 206,156 206,118 L206,88 Z"
+                fill="url(#psBg)"
+              />
+
+              {/* Left gloss strip */}
+              <rect x="16" y="88" width="42" height="224" rx="10" fill="url(#psGloss)" opacity="0.40" clipPath="url(#psClip)" />
+
+              {/* White label background */}
+              <rect x="14" y="163" width="252" height="116" rx="10" fill="rgba(255,255,255,0.92)" />
+
+              {/* Neck */}
+              <rect x="72" y="84" width="136" height="34" fill="url(#psBg)" />
+              <rect x="72" y="84" width="136" height="34" fill="rgba(0,0,0,0.06)" />
+
+              {/* Wide ribbed plastic cap */}
+              <rect x="36" y="4"  width="208" height="84" rx="14" fill="#f0eeec" />
+              <rect x="36" y="4"  width="208" height="84" rx="14" fill="url(#psCap)" />
+              {/* Rib lines */}
+              <line x1="38" y1="28" x2="242" y2="28" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
+              <line x1="38" y1="48" x2="242" y2="48" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
+              <line x1="38" y1="68" x2="242" y2="68" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
+              {/* Cap–neck seam */}
+              <rect x="36" y="82" width="208" height="5" rx="0" fill="rgba(0,0,0,0.10)" />
+            </svg>
+
+            {/* Label content */}
             <div
-              className="absolute top-0 left-[20%] w-[28%] h-full rounded-full opacity-35"
-              style={{
-                background: 'linear-gradient(180deg, white 0%, transparent 60%)',
-              }}
-            />
-            <div className="absolute inset-x-4 top-[22%] bottom-[22%] rounded-[36px] bg-white/75 flex flex-col items-center justify-center gap-1.5 border border-white/90">
+              className="absolute flex flex-col items-center justify-center text-center pointer-events-none"
+              style={{ top: '50.9%', left: '5%', right: '5%', bottom: '13.4%' }}
+            >
               <span
-                className="text-[#1a2e1a] text-2xl font-black"
-                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                className="font-black text-[#1a2e1a] leading-none"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(12px, 2.5vw, 18px)' }}
               >
                 ZenPotion
               </span>
-              <div className="w-6 h-px bg-[#5a7a4e]" />
-              <span className="text-[8px] uppercase tracking-widest text-[#5a7a4e] text-center px-3">
+              <div className="w-6 h-px bg-[#5a7a4e] my-1" />
+              <span
+                className="uppercase text-[#5a7a4e] font-semibold text-center"
+                style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(4px, 0.8vw, 6px)', letterSpacing: '0.2em' }}
+              >
                 Natural Hydration
               </span>
             </div>
-            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-12 h-6 rounded-full bg-[#1a2e1a]" />
           </div>
-          {/* Glow */}
-          <div
-            className="absolute -inset-8 -z-10 rounded-full"
-            style={{
-              background: 'radial-gradient(ellipse, rgba(90,122,78,0.3) 0%, transparent 65%)',
-            }}
-          />
         </div>
 
         {/* Text overlay */}

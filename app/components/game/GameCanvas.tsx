@@ -65,10 +65,10 @@ const ING_COLORS: Record<IngredientType, string> = {
   amla: '#22c55e', beetroot: '#be185d',
 };
 
-// ─── Shot-bottle player drawing ───────────────────────────────────────────────
+// ─── Plenish-style shot bottle drawing ───────────────────────────────────────
 /**
- * Draws the 60ml ZenPotion shot bottle (cap → neck → shoulder → body → flat bottom).
- * Coordinate origin = sprite centre; caller must un-transform before this call.
+ * Wide white ribbed cap → very short neck → quick shoulder → squat body.
+ * Matches Plenish 60ml shot bottle proportions.
  */
 function drawBottle(
   ctx: CanvasRenderingContext2D,
@@ -86,23 +86,21 @@ function drawBottle(
   const hw = w / 2;
   const hh = h / 2;
 
-  // Section heights (proportional)
-  const capH       = h * 0.14;   // ≈7px  screw cap
-  const neckH      = h * 0.13;   // ≈6.5px thin neck
-  const shoulderH  = h * 0.16;   // ≈8px  shoulder taper
+  // Plenish proportions: dominant cap, minimal neck, squat body
+  const capH      = h * 0.30;  // large ribbed cap
+  const neckH     = h * 0.10;  // very short neck
+  const shoulderH = h * 0.14;  // quick outward taper
 
-  // Section half-widths
-  const hCapW  = hw * 0.50;   // cap slightly wider than neck
-  const hNeckW = hw * 0.33;   // neck
+  const hCapW  = hw * 0.95;  // cap nearly full visual width
+  const hNeckW = hw * 0.60;  // neck ~60% of half-width
 
-  // Y positions (0 = centre, −hh = top, +hh = bottom)
   const topY            = -hh;
   const capBottomY      = topY + capH;
   const neckBottomY     = capBottomY + neckH;
   const shoulderBottomY = neckBottomY + shoulderH;
   const bodyBottomY     = hh;
 
-  // ── Ginger aura ───────────────────────────────────────────────────────────
+  // Ginger aura
   if (powered) {
     const pulse = 22 + Math.sin(frame * 0.22) * 6;
     const aura = ctx.createRadialGradient(0, 0, 6, 0, 0, pulse);
@@ -114,102 +112,131 @@ function drawBottle(
     ctx.fill();
   }
 
-  // ── Body path (shoulder bezier + straight sides + rounded bottom) ─────────
+  // ── Body + shoulder ───────────────────────────────────────────────────────
   function bottleBody() {
     ctx.beginPath();
     ctx.moveTo(-hNeckW, neckBottomY);
     ctx.bezierCurveTo(
-      -hNeckW, neckBottomY + shoulderH * 0.55,
-      -hw,     neckBottomY + shoulderH * 0.80,
+      -hNeckW, neckBottomY + shoulderH * 0.6,
+      -hw,     neckBottomY + shoulderH * 0.9,
       -hw,     shoulderBottomY
     );
-    ctx.lineTo(-hw, bodyBottomY - 3);
-    ctx.arcTo(-hw, bodyBottomY, -hw + 3, bodyBottomY, 3);
-    ctx.lineTo(hw - 3, bodyBottomY);
-    ctx.arcTo(hw, bodyBottomY, hw, bodyBottomY - 3, 3);
+    ctx.lineTo(-hw, bodyBottomY - 2.5);
+    ctx.arcTo(-hw, bodyBottomY, -hw + 2.5, bodyBottomY, 2.5);
+    ctx.lineTo(hw - 2.5, bodyBottomY);
+    ctx.arcTo(hw, bodyBottomY, hw, bodyBottomY - 2.5, 2.5);
     ctx.lineTo(hw, shoulderBottomY);
     ctx.bezierCurveTo(
-      hw,     neckBottomY + shoulderH * 0.80,
-      hNeckW, neckBottomY + shoulderH * 0.55,
+      hw,     neckBottomY + shoulderH * 0.9,
+      hNeckW, neckBottomY + shoulderH * 0.6,
       hNeckW, neckBottomY
     );
     ctx.closePath();
   }
 
   bottleBody();
-  const bodyGrad = ctx.createLinearGradient(-hw, shoulderBottomY, hw * 0.6, bodyBottomY);
+  const bodyGrad = ctx.createLinearGradient(-hw, shoulderBottomY, hw * 0.5, bodyBottomY);
   if (powered) {
-    bodyGrad.addColorStop(0,   '#fef3c7');
+    bodyGrad.addColorStop(0,   '#fef9e7');
     bodyGrad.addColorStop(0.4, '#fcd34d');
-    bodyGrad.addColorStop(0.9, '#b45309');
+    bodyGrad.addColorStop(1,   '#b45309');
   } else {
-    bodyGrad.addColorStop(0,    '#d4edda');
-    bodyGrad.addColorStop(0.30, '#a8d5a2');
-    bodyGrad.addColorStop(0.75, '#5a7a4e');
+    bodyGrad.addColorStop(0,    '#e8f5e4');
+    bodyGrad.addColorStop(0.35, '#a8d5a2');
+    bodyGrad.addColorStop(0.80, '#5a7a4e');
     bodyGrad.addColorStop(1,    '#3a5a3a');
   }
   ctx.fillStyle = bodyGrad;
   ctx.fill();
 
-  // Body gloss highlight (left edge)
+  // Body left gloss strip
   ctx.save();
   bottleBody();
   ctx.clip();
-  ctx.globalAlpha = 0.22;
+  ctx.globalAlpha = 0.20;
   const gloss = ctx.createLinearGradient(-hw, shoulderBottomY, 0, bodyBottomY);
   gloss.addColorStop(0, '#ffffff');
   gloss.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = gloss;
-  ctx.fillRect(-hw, neckBottomY, hw * 0.65, h);
+  ctx.fillRect(-hw, neckBottomY, hw * 0.50, h);
   ctx.restore();
 
-  // ── Neck ──────────────────────────────────────────────────────────────────
+  // ── Neck (clear plastic — juice color shows through) ──────────────────────
   const neckGrad = ctx.createLinearGradient(-hNeckW, 0, hNeckW, 0);
   if (powered) {
-    neckGrad.addColorStop(0, '#d97706');
-    neckGrad.addColorStop(0.5, '#fef3c7');
-    neckGrad.addColorStop(1, '#b45309');
+    neckGrad.addColorStop(0, '#c97a06'); neckGrad.addColorStop(0.5, '#fde68a'); neckGrad.addColorStop(1, '#c97a06');
   } else {
-    neckGrad.addColorStop(0, '#3a5a3a');
-    neckGrad.addColorStop(0.5, '#7eaa70');
-    neckGrad.addColorStop(1, '#2a4a2a');
+    neckGrad.addColorStop(0, '#4a6a42'); neckGrad.addColorStop(0.5, '#8fc98a'); neckGrad.addColorStop(1, '#4a6a42');
   }
   ctx.fillStyle = neckGrad;
   ctx.fillRect(-hNeckW, capBottomY, hNeckW * 2, neckH + 1);
 
-  // ── Label band ────────────────────────────────────────────────────────────
-  const lblCY = (shoulderBottomY + bodyBottomY) / 2 - 1;
-  const lblH  = (bodyBottomY - shoulderBottomY) * 0.54;
-  ctx.fillStyle = 'rgba(255,255,255,0.86)';
-  ctx.fillRect(-hw + 2, lblCY - lblH / 2, (hw - 2) * 2, lblH);
+  // ── Label ─────────────────────────────────────────────────────────────────
+  const lblCY = (shoulderBottomY + bodyBottomY) / 2;
+  const lblH  = (bodyBottomY - shoulderBottomY) * 0.62;
+  ctx.fillStyle = 'rgba(255,255,255,0.90)';
+  ctx.fillRect(-hw + 1.5, lblCY - lblH / 2, (hw - 1.5) * 2, lblH);
 
-  ctx.fillStyle = powered ? '#78350f' : '#1a2e1a';
-  ctx.font = `bold ${Math.round(w * 0.43)}px sans-serif`;
+  ctx.fillStyle = powered ? '#92400e' : '#1a2e1a';
+  ctx.font = `bold ${Math.round(w * 0.40)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('ZP', 0, lblCY - lblH * 0.14);
+  ctx.fillText('ZP', 0, lblCY - lblH * 0.18);
 
   ctx.fillStyle = powered ? '#b45309' : '#5a7a4e';
-  ctx.font = `${Math.round(w * 0.24)}px sans-serif`;
-  ctx.fillText('60ml', 0, lblCY + lblH * 0.35);
+  ctx.font = `${Math.round(w * 0.21)}px sans-serif`;
+  ctx.fillText('60ml', 0, lblCY + lblH * 0.30);
 
-  // ── Screw cap ─────────────────────────────────────────────────────────────
-  ctx.fillStyle = powered ? '#78350f' : '#1a2e1a';
+  // ── Wide ribbed plastic cap ────────────────────────────────────────────────
+  const cr = 2.5;
+  // Base fill
+  ctx.fillStyle = powered ? '#fef3c7' : '#f0eeec';
   ctx.beginPath();
-  ctx.moveTo(-hCapW + 2, topY);
-  ctx.arcTo(hCapW, topY, hCapW, topY + 2, 2);
+  ctx.moveTo(-hCapW + cr, topY);
+  ctx.arcTo(hCapW, topY, hCapW, topY + cr, cr);
   ctx.lineTo(hCapW, capBottomY);
   ctx.lineTo(-hCapW, capBottomY);
-  ctx.lineTo(-hCapW, topY + 2);
-  ctx.arcTo(-hCapW, topY, -hCapW + 2, topY, 2);
+  ctx.lineTo(-hCapW, topY + cr);
+  ctx.arcTo(-hCapW, topY, -hCapW + cr, topY, cr);
   ctx.closePath();
   ctx.fill();
 
-  // Cap gloss
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(-hCapW + 1, topY + 1, hCapW * 0.65, capH - 1);
-  ctx.globalAlpha = 1;
+  // Cap gradient overlay (top-bright, bottom-shadow for 3D dome effect)
+  const capGrad = ctx.createLinearGradient(0, topY, 0, capBottomY);
+  if (powered) {
+    capGrad.addColorStop(0,   'rgba(255,253,230,0.9)');
+    capGrad.addColorStop(0.6, 'rgba(251,191,36,0.15)');
+    capGrad.addColorStop(1,   'rgba(120,53,15,0.25)');
+  } else {
+    capGrad.addColorStop(0,   'rgba(255,255,255,0.88)');
+    capGrad.addColorStop(0.5, 'rgba(220,218,214,0.1)');
+    capGrad.addColorStop(1,   'rgba(140,136,130,0.30)');
+  }
+  ctx.fillStyle = capGrad;
+  ctx.beginPath();
+  ctx.moveTo(-hCapW + cr, topY);
+  ctx.arcTo(hCapW, topY, hCapW, topY + cr, cr);
+  ctx.lineTo(hCapW, capBottomY);
+  ctx.lineTo(-hCapW, capBottomY);
+  ctx.lineTo(-hCapW, topY + cr);
+  ctx.arcTo(-hCapW, topY, -hCapW + cr, topY, cr);
+  ctx.closePath();
+  ctx.fill();
+
+  // Horizontal rib lines
+  ctx.strokeStyle = powered ? 'rgba(160,110,10,0.18)' : 'rgba(0,0,0,0.07)';
+  ctx.lineWidth = 0.6;
+  for (let i = 1; i <= 3; i++) {
+    const ry = topY + capH * (i / 4);
+    ctx.beginPath();
+    ctx.moveTo(-hCapW + 1, ry);
+    ctx.lineTo(hCapW - 1, ry);
+    ctx.stroke();
+  }
+
+  // Cap-to-neck seam (thin dark ring)
+  ctx.fillStyle = powered ? 'rgba(120,53,15,0.35)' : 'rgba(0,0,0,0.14)';
+  ctx.fillRect(-hCapW, capBottomY - 1, hCapW * 2, 1.8);
 
   ctx.restore();
 }
