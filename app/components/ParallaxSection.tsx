@@ -133,58 +133,106 @@ export default function ParallaxSection() {
             className="relative w-28 md:w-36"
             style={{ filter: 'drop-shadow(0 20px 36px rgba(26,46,26,0.30))' }}
           >
-            <svg viewBox="0 0 200 360" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
+            <svg viewBox="0 0 200 360" className="w-full h-auto">
               <defs>
-                <linearGradient id="psBg" x1="0" y1="80" x2="200" y2="360" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"  stopColor="#daf0d6" />
+                <linearGradient id="psBg" x1="0" y1="80" x2="200" y2="340">
+                  <stop offset="0%" stopColor="#daf0d6" />
                   <stop offset="40%" stopColor="#8fc98a" />
                   <stop offset="100%" stopColor="#3a5835" />
                 </linearGradient>
+
                 <linearGradient id="psGloss" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"  stopColor="white" stopOpacity="0.55" />
+                  <stop offset="0%" stopColor="white" stopOpacity="0.55" />
                   <stop offset="80%" stopColor="white" stopOpacity="0" />
                 </linearGradient>
-                <linearGradient id="psCap" x1="100" y1="4" x2="100" y2="82" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"  stopColor="#ffffff" stopOpacity="0.9" />
-                  <stop offset="55%" stopColor="#e8e6e2" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#b0aca6" stopOpacity="0.35" />
+
+                <linearGradient id="psCap" x1="100" y1="4" x2="100" y2="79">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                  <stop offset="55%" stopColor="#e8e6e2" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#a8a4a0" stopOpacity="0.40" />
                 </linearGradient>
+
+                {/* ✅ FIXED CURVED SHAPE */}
                 <clipPath id="psClip">
-                  <path d="M64,80 L64,108 C64,138 12,134 12,138 L12,308 Q12,328 32,328 L168,328 Q188,328 188,308 L188,138 C188,134 136,138 136,108 L136,80 Z" />
+                  <path
+                    d="
+              M60,80
+              C60,100 50,115 30,130
+              C20,140 20,160 20,180
+              C18,240 18,260 20,300
+              C20,335 45,355 70,350
+              L130,350
+              C155,355 180,335 180,300
+              C182,260 182,240 180,180
+              C180,160 180,140 170,130
+              C150,115 140,100 140,80
+              Z
+            "
+                  />
                 </clipPath>
               </defs>
 
-              {/* Body (shoulder + barrel) */}
+              {/* Bottle body */}
               <path
-                d="M64,80 L64,108 C64,138 12,134 12,138 L12,308 Q12,328 32,328 L168,328 Q188,328 188,308 L188,138 C188,134 136,138 136,108 L136,80 Z"
+                d="
+          M60,80
+          C60,100 50,115 30,130
+          C20,140 20,160 20,180
+          C18,240 18,260 20,300
+          C20,335 45,355 70,350
+          L130,350
+          C155,355 180,335 180,300
+          C182,260 182,240 180,180
+          C180,160 180,140 170,130
+          C150,115 140,100 140,80
+          Z
+        "
                 fill="url(#psBg)"
               />
 
-              {/* Left gloss strip */}
-              <rect x="16" y="80" width="34" height="248" rx="8" fill="url(#psGloss)" opacity="0.40" clipPath="url(#psClip)" />
+              {/* Gloss */}
+              <rect
+                x="22"
+                y="130"
+                width="28"
+                height="220"
+                rx="10"
+                fill="url(#psGloss)"
+                opacity="0.35"
+                clipPath="url(#psClip)"
+              />
 
-              {/* White label background */}
-              <rect x="14" y="152" width="172" height="140" rx="8" fill="rgba(255,255,255,0.92)" />
+              {/* Label */}
+              <rect
+                x="20"
+                y="150"
+                width="160"
+                height="170"
+                rx="12"
+                fill="rgba(255,255,255,0.92)"
+              />
 
               {/* Neck */}
-              <rect x="62" y="76" width="76" height="32" fill="url(#psBg)" />
-              <rect x="62" y="76" width="76" height="32" fill="rgba(0,0,0,0.06)" />
+              <rect x="60" y="78" width="80" height="22" fill="url(#psBg)" />
+              <rect x="60" y="78" width="80" height="22" fill="rgba(0,0,0,0.08)" />
 
-              {/* Wide ribbed plastic cap */}
-              <rect x="28" y="4"  width="144" height="76" rx="12" fill="#f0eeec" />
-              <rect x="28" y="4"  width="144" height="76" rx="12" fill="url(#psCap)" />
-              {/* Rib lines */}
-              <line x1="30" y1="26" x2="170" y2="26" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
-              <line x1="30" y1="46" x2="170" y2="46" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
-              <line x1="30" y1="64" x2="170" y2="64" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
-              {/* Cap–neck seam */}
-              <rect x="28" y="78" width="144" height="5" rx="0" fill="rgba(0,0,0,0.10)" />
+              {/* Cap */}
+              <rect x="48" y="4" width="104" height="75" rx="10" fill="#f0eeec" />
+              <rect x="48" y="4" width="104" height="75" rx="10" fill="url(#psCap)" />
+
+              {/* Cap lines */}
+              <line x1="50" y1="26" x2="150" y2="26" stroke="rgba(0,0,0,0.08)" />
+              <line x1="50" y1="48" x2="150" y2="48" stroke="rgba(0,0,0,0.08)" />
+              <line x1="50" y1="67" x2="150" y2="67" stroke="rgba(0,0,0,0.08)" />
+
+              {/* Cap base shadow */}
+              <rect x="48" y="77" width="104" height="4" fill="rgba(0,0,0,0.14)" />
             </svg>
 
-            {/* Label content */}
+            {/* Label content (unchanged) */}
             <div
               className="absolute flex flex-col items-center justify-center text-center pointer-events-none"
-              style={{ top: '42.2%', left: '7%', right: '7%', bottom: '8.4%' }}
+              style={{ top: '39.4%', left: '6%', right: '6%', bottom: '12.2%' }}
             >
               <span
                 className="font-black text-[#1a2e1a] leading-none"
