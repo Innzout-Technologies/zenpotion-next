@@ -13,8 +13,8 @@ export interface PlayerState {
 }
 
 export function createPlayer(groundY: number): PlayerState {
-  const width = 26;   // capsule width
-  const height = 50;  // capsule height (≈1:1.9 ratio — pill proportions)
+  const width = 22;   // bottle width
+  const height = 58;  // bottle height (≈1:2.6 ratio — shot bottle proportions)
   const baseX = 72;
   return {
     x: baseX,

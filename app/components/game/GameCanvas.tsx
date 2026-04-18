@@ -86,13 +86,13 @@ function drawBottle(
   const hw = w / 2;
   const hh = h / 2;
 
-  // Plenish proportions: dominant cap, minimal neck, squat body
-  const capH      = h * 0.30;  // large ribbed cap
-  const neckH     = h * 0.10;  // very short neck
-  const shoulderH = h * 0.14;  // quick outward taper
+  // Plenish proportions: cap ~25%, tall body
+  const capH      = h * 0.25;  // ribbed cap
+  const neckH     = h * 0.08;  // short neck
+  const shoulderH = h * 0.13;  // quick shoulder taper
 
-  const hCapW  = hw * 0.95;  // cap nearly full visual width
-  const hNeckW = hw * 0.60;  // neck ~60% of half-width
+  const hCapW  = hw * 0.90;  // cap slightly narrower than body
+  const hNeckW = hw * 0.55;  // neck ~55% of half-width
 
   const topY            = -hh;
   const capBottomY      = topY + capH;

@@ -130,12 +130,12 @@ export default function ParallaxSection() {
           />
 
           <div
-            className="relative w-36 md:w-48"
+            className="relative w-28 md:w-36"
             style={{ filter: 'drop-shadow(0 20px 36px rgba(26,46,26,0.30))' }}
           >
-            <svg viewBox="0 0 280 320" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
+            <svg viewBox="0 0 200 360" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
               <defs>
-                <linearGradient id="psBg" x1="0" y1="88" x2="280" y2="320" gradientUnits="userSpaceOnUse">
+                <linearGradient id="psBg" x1="0" y1="80" x2="200" y2="360" gradientUnits="userSpaceOnUse">
                   <stop offset="0%"  stopColor="#daf0d6" />
                   <stop offset="40%" stopColor="#8fc98a" />
                   <stop offset="100%" stopColor="#3a5835" />
@@ -144,58 +144,58 @@ export default function ParallaxSection() {
                   <stop offset="0%"  stopColor="white" stopOpacity="0.55" />
                   <stop offset="80%" stopColor="white" stopOpacity="0" />
                 </linearGradient>
-                <linearGradient id="psCap" x1="140" y1="4" x2="140" y2="88" gradientUnits="userSpaceOnUse">
+                <linearGradient id="psCap" x1="100" y1="4" x2="100" y2="82" gradientUnits="userSpaceOnUse">
                   <stop offset="0%"  stopColor="#ffffff" stopOpacity="0.9" />
                   <stop offset="55%" stopColor="#e8e6e2" stopOpacity="0.2" />
                   <stop offset="100%" stopColor="#b0aca6" stopOpacity="0.35" />
                 </linearGradient>
                 <clipPath id="psClip">
-                  <path d="M74,88 L74,118 C74,156 12,152 12,156 L12,290 Q12,312 34,312 L246,312 Q268,312 268,290 L268,156 C268,152 206,156 206,118 L206,88 Z" />
+                  <path d="M64,80 L64,108 C64,138 12,134 12,138 L12,308 Q12,328 32,328 L168,328 Q188,328 188,308 L188,138 C188,134 136,138 136,108 L136,80 Z" />
                 </clipPath>
               </defs>
 
               {/* Body (shoulder + barrel) */}
               <path
-                d="M74,88 L74,118 C74,156 12,152 12,156 L12,290 Q12,312 34,312 L246,312 Q268,312 268,290 L268,156 C268,152 206,156 206,118 L206,88 Z"
+                d="M64,80 L64,108 C64,138 12,134 12,138 L12,308 Q12,328 32,328 L168,328 Q188,328 188,308 L188,138 C188,134 136,138 136,108 L136,80 Z"
                 fill="url(#psBg)"
               />
 
               {/* Left gloss strip */}
-              <rect x="16" y="88" width="42" height="224" rx="10" fill="url(#psGloss)" opacity="0.40" clipPath="url(#psClip)" />
+              <rect x="16" y="80" width="34" height="248" rx="8" fill="url(#psGloss)" opacity="0.40" clipPath="url(#psClip)" />
 
               {/* White label background */}
-              <rect x="14" y="163" width="252" height="116" rx="10" fill="rgba(255,255,255,0.92)" />
+              <rect x="14" y="152" width="172" height="140" rx="8" fill="rgba(255,255,255,0.92)" />
 
               {/* Neck */}
-              <rect x="72" y="84" width="136" height="34" fill="url(#psBg)" />
-              <rect x="72" y="84" width="136" height="34" fill="rgba(0,0,0,0.06)" />
+              <rect x="62" y="76" width="76" height="32" fill="url(#psBg)" />
+              <rect x="62" y="76" width="76" height="32" fill="rgba(0,0,0,0.06)" />
 
               {/* Wide ribbed plastic cap */}
-              <rect x="36" y="4"  width="208" height="84" rx="14" fill="#f0eeec" />
-              <rect x="36" y="4"  width="208" height="84" rx="14" fill="url(#psCap)" />
+              <rect x="28" y="4"  width="144" height="76" rx="12" fill="#f0eeec" />
+              <rect x="28" y="4"  width="144" height="76" rx="12" fill="url(#psCap)" />
               {/* Rib lines */}
-              <line x1="38" y1="28" x2="242" y2="28" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
-              <line x1="38" y1="48" x2="242" y2="48" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
-              <line x1="38" y1="68" x2="242" y2="68" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
+              <line x1="30" y1="26" x2="170" y2="26" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
+              <line x1="30" y1="46" x2="170" y2="46" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
+              <line x1="30" y1="64" x2="170" y2="64" stroke="rgba(0,0,0,0.06)" strokeWidth="1.5" />
               {/* Cap–neck seam */}
-              <rect x="36" y="82" width="208" height="5" rx="0" fill="rgba(0,0,0,0.10)" />
+              <rect x="28" y="78" width="144" height="5" rx="0" fill="rgba(0,0,0,0.10)" />
             </svg>
 
             {/* Label content */}
             <div
               className="absolute flex flex-col items-center justify-center text-center pointer-events-none"
-              style={{ top: '50.9%', left: '5%', right: '5%', bottom: '13.4%' }}
+              style={{ top: '42.2%', left: '7%', right: '7%', bottom: '8.4%' }}
             >
               <span
                 className="font-black text-[#1a2e1a] leading-none"
-                style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(12px, 2.5vw, 18px)' }}
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(10px, 2vw, 15px)' }}
               >
                 ZenPotion
               </span>
-              <div className="w-6 h-px bg-[#5a7a4e] my-1" />
+              <div className="w-5 h-px bg-[#5a7a4e] my-1" />
               <span
                 className="uppercase text-[#5a7a4e] font-semibold text-center"
-                style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(4px, 0.8vw, 6px)', letterSpacing: '0.2em' }}
+                style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(3px, 0.7vw, 5px)', letterSpacing: '0.2em' }}
               >
                 Natural Hydration
               </span>
