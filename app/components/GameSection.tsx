@@ -16,6 +16,7 @@ interface GameResult {
   score: number;
   collected: Record<IngredientType, number>;
   won: boolean;
+  drinks: number;
 }
 
 export default function GameSection() {
@@ -25,8 +26,8 @@ export default function GameSection() {
   const [gameKey, setGameKey] = useState(0);
 
   const handleGameEnd = useCallback(
-    (score: number, collected: Record<IngredientType, number>, won: boolean) => {
-      setResult({ score, collected, won });
+    (score: number, collected: Record<IngredientType, number>, won: boolean, drinks: number) => {
+      setResult({ score, collected, won, drinks });
       setGameState('finished');
     },
     []
@@ -179,6 +180,7 @@ export default function GameSection() {
                 <ResultOverlay
                   won={result.won}
                   score={result.score}
+                  drinks={result.drinks}
                   product={product}
                   onPlayAgain={handleStart}
                   onOrder={scrollToCTA}

@@ -1,5 +1,7 @@
 export interface PlayerState {
   x: number;
+  vx: number;     // horizontal velocity — non-zero during jump arc
+  baseX: number;  // resting position; player returns here when grounded
   y: number;
   width: number;
   height: number;
@@ -7,15 +9,19 @@ export interface PlayerState {
   isGrounded: boolean;
   lives: number;
   isHurt: boolean;
-  hurtTimer: number; // frames remaining in hurt invincibility
+  hurtTimer: number;
 }
 
 export function createPlayer(groundY: number): PlayerState {
-  const height = 52;
+  const width = 26;   // capsule width
+  const height = 50;  // capsule height (≈1:1.9 ratio — pill proportions)
+  const baseX = 72;
   return {
-    x: 72,
+    x: baseX,
+    vx: 0,
+    baseX,
     y: groundY - height,
-    width: 40,
+    width,
     height,
     vy: 0,
     isGrounded: true,

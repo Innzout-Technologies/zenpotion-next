@@ -4,17 +4,11 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { createPlayer } from './Player';
 import type { PlayerState } from './Player';
 import {
-  GRAVITY_RISE,
-  GRAVITY_HOLD,
-  GRAVITY_FALL,
-  TERMINAL_VELOCITY,
-  JUMP_FORCE,
-  JUMP_BUFFER_FRAMES,
-  HURT_FRAMES,
-  INGREDIENTS_TO_WIN,
-  getSpeedForScore,
-  getObstacleGap,
-  getIngredientGap,
+  GRAVITY_RISE, GRAVITY_HOLD, GRAVITY_FALL, TERMINAL_VELOCITY,
+  JUMP_FORCE, JUMP_VX, PLAYER_MAX_FORWARD, RETURN_SPEED,
+  JUMP_BUFFER_FRAMES, HURT_FRAMES,
+  GINGER_POWER_FRAMES, GINGER_JUICE_BONUS, INGREDIENTS_TO_WIN,
+  getSpeedForScore, getObstacleGap, getIngredientGap,
 } from './Physics';
 import { createObstacle, updateObstacles } from './Obstacles';
 import type { Obstacle } from './Obstacles';
@@ -25,106 +19,263 @@ import { useCollision } from '../../hooks/useCollision';
 import { calcJuiceMeter } from '../../utils/gameHelpers';
 import GameHUD from './GameHUD';
 
-// ─── Canvas resolution ────────────────────────────────────────────────────────
 const CANVAS_W = 800;
 const CANVAS_H = 300;
-const GROUND_Y = CANVAS_H - 55;
+const GROUND_Y  = CANVAS_H - 55;
+const WARN_DIST = 210;
 
 // ─── Particle system ──────────────────────────────────────────────────────────
 interface Particle {
-  x: number; y: number;
-  vx: number; vy: number;
-  life: number;
-  maxLife: number;
-  color: string;
-  size: number;
+  x: number; y: number; vx: number; vy: number;
+  life: number; maxLife: number; color: string; size: number;
 }
 
-function spawnPickupBurst(list: Particle[], x: number, y: number, color: string) {
-  for (let i = 0; i < 8; i++) {
-    const angle = (Math.PI * 2 / 8) * i + Math.random() * 0.4;
-    const spd = 1.5 + Math.random() * 2.5;
-    list.push({
-      x, y,
-      vx: Math.cos(angle) * spd,
-      vy: Math.sin(angle) * spd - 1.5,
-      life: 22 + Math.random() * 12,
-      maxLife: 34,
-      color,
-      size: 3 + Math.random() * 3,
-    });
+function burst(list: Particle[], x: number, y: number, color: string, count = 8, speed = 2.5) {
+  for (let i = 0; i < count; i++) {
+    const a = (Math.PI * 2 / count) * i + Math.random() * 0.4;
+    const s = speed * (0.6 + Math.random() * 0.8);
+    list.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - 1.2,
+      life: 20 + Math.random()*14, maxLife: 34, color, size: 2.5+Math.random()*3 });
   }
 }
 
-function spawnDust(list: Particle[], x: number, y: number) {
-  list.push({
-    x: x + Math.random() * 10 - 5,
-    y,
-    vx: -0.4 - Math.random() * 0.8,
-    vy: -Math.random() * 0.7,
-    life: 10 + Math.random() * 8,
-    maxLife: 18,
-    color: '#b8d9b2',
-    size: 2 + Math.random() * 2,
-  });
+function dust(list: Particle[], x: number, y: number) {
+  list.push({ x: x+Math.random()*8-4, y, vx: -0.3-Math.random()*0.7, vy: -Math.random()*0.6,
+    life: 10+Math.random()*7, maxLife: 17, color: '#b8d9b2', size: 1.5+Math.random()*2 });
 }
 
-function spawnHitBurst(list: Particle[], x: number, y: number) {
-  for (let i = 0; i < 10; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const spd = 1.5 + Math.random() * 3;
-    list.push({
-      x, y,
-      vx: Math.cos(angle) * spd,
-      vy: Math.sin(angle) * spd - 2,
-      life: 20 + Math.random() * 15,
-      maxLife: 35,
-      color: i % 2 === 0 ? '#ef4444' : '#fbbf24',
-      size: 2.5 + Math.random() * 3,
-    });
-  }
+function hitBurst(list: Particle[], x: number, y: number) {
+  burst(list, x, y, '#ef4444', 6, 3);
+  burst(list, x, y, '#fbbf24', 4, 2);
 }
 
-const INGREDIENT_COLORS: Record<IngredientType, string> = {
-  orange: '#f97316',
-  ginger: '#22c55e',
-  amla:   '#16a34a',
+function gingerBurst(list: Particle[], x: number, y: number) {
+  burst(list, x, y, '#fbbf24', 12, 4);
+  burst(list, x, y, '#f59e0b', 8, 2.5);
+}
+
+function drinkBurst(list: Particle[], x: number, y: number) {
+  burst(list, x, y, '#22c55e', 18, 5.5);
+  burst(list, x, y, '#86efac', 12, 3.5);
+  burst(list, x, y, '#ffffff', 8,  4.5);
+}
+
+const ING_COLORS: Record<IngredientType, string> = {
+  orange: '#f97316', lemon: '#eab308', ginger: '#f59e0b',
+  amla: '#22c55e', beetroot: '#be185d',
 };
+
+// ─── Shot-bottle player drawing ───────────────────────────────────────────────
+/**
+ * Draws the 60ml ZenPotion shot bottle (cap → neck → shoulder → body → flat bottom).
+ * Coordinate origin = sprite centre; caller must un-transform before this call.
+ */
+function drawBottle(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number,
+  w: number, h: number,
+  tilt: number,
+  sx: number, sy: number,
+  powered: boolean, frame: number
+) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(tilt);
+  ctx.scale(sx, sy);
+
+  const hw = w / 2;
+  const hh = h / 2;
+
+  // Section heights (proportional)
+  const capH       = h * 0.14;   // ≈7px  screw cap
+  const neckH      = h * 0.13;   // ≈6.5px thin neck
+  const shoulderH  = h * 0.16;   // ≈8px  shoulder taper
+
+  // Section half-widths
+  const hCapW  = hw * 0.50;   // cap slightly wider than neck
+  const hNeckW = hw * 0.33;   // neck
+
+  // Y positions (0 = centre, −hh = top, +hh = bottom)
+  const topY            = -hh;
+  const capBottomY      = topY + capH;
+  const neckBottomY     = capBottomY + neckH;
+  const shoulderBottomY = neckBottomY + shoulderH;
+  const bodyBottomY     = hh;
+
+  // ── Ginger aura ───────────────────────────────────────────────────────────
+  if (powered) {
+    const pulse = 22 + Math.sin(frame * 0.22) * 6;
+    const aura = ctx.createRadialGradient(0, 0, 6, 0, 0, pulse);
+    aura.addColorStop(0, 'rgba(251,191,36,0.60)');
+    aura.addColorStop(1, 'rgba(251,191,36,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, 0, pulse, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── Body path (shoulder bezier + straight sides + rounded bottom) ─────────
+  function bottleBody() {
+    ctx.beginPath();
+    ctx.moveTo(-hNeckW, neckBottomY);
+    ctx.bezierCurveTo(
+      -hNeckW, neckBottomY + shoulderH * 0.55,
+      -hw,     neckBottomY + shoulderH * 0.80,
+      -hw,     shoulderBottomY
+    );
+    ctx.lineTo(-hw, bodyBottomY - 3);
+    ctx.arcTo(-hw, bodyBottomY, -hw + 3, bodyBottomY, 3);
+    ctx.lineTo(hw - 3, bodyBottomY);
+    ctx.arcTo(hw, bodyBottomY, hw, bodyBottomY - 3, 3);
+    ctx.lineTo(hw, shoulderBottomY);
+    ctx.bezierCurveTo(
+      hw,     neckBottomY + shoulderH * 0.80,
+      hNeckW, neckBottomY + shoulderH * 0.55,
+      hNeckW, neckBottomY
+    );
+    ctx.closePath();
+  }
+
+  bottleBody();
+  const bodyGrad = ctx.createLinearGradient(-hw, shoulderBottomY, hw * 0.6, bodyBottomY);
+  if (powered) {
+    bodyGrad.addColorStop(0,   '#fef3c7');
+    bodyGrad.addColorStop(0.4, '#fcd34d');
+    bodyGrad.addColorStop(0.9, '#b45309');
+  } else {
+    bodyGrad.addColorStop(0,    '#d4edda');
+    bodyGrad.addColorStop(0.30, '#a8d5a2');
+    bodyGrad.addColorStop(0.75, '#5a7a4e');
+    bodyGrad.addColorStop(1,    '#3a5a3a');
+  }
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+
+  // Body gloss highlight (left edge)
+  ctx.save();
+  bottleBody();
+  ctx.clip();
+  ctx.globalAlpha = 0.22;
+  const gloss = ctx.createLinearGradient(-hw, shoulderBottomY, 0, bodyBottomY);
+  gloss.addColorStop(0, '#ffffff');
+  gloss.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gloss;
+  ctx.fillRect(-hw, neckBottomY, hw * 0.65, h);
+  ctx.restore();
+
+  // ── Neck ──────────────────────────────────────────────────────────────────
+  const neckGrad = ctx.createLinearGradient(-hNeckW, 0, hNeckW, 0);
+  if (powered) {
+    neckGrad.addColorStop(0, '#d97706');
+    neckGrad.addColorStop(0.5, '#fef3c7');
+    neckGrad.addColorStop(1, '#b45309');
+  } else {
+    neckGrad.addColorStop(0, '#3a5a3a');
+    neckGrad.addColorStop(0.5, '#7eaa70');
+    neckGrad.addColorStop(1, '#2a4a2a');
+  }
+  ctx.fillStyle = neckGrad;
+  ctx.fillRect(-hNeckW, capBottomY, hNeckW * 2, neckH + 1);
+
+  // ── Label band ────────────────────────────────────────────────────────────
+  const lblCY = (shoulderBottomY + bodyBottomY) / 2 - 1;
+  const lblH  = (bodyBottomY - shoulderBottomY) * 0.54;
+  ctx.fillStyle = 'rgba(255,255,255,0.86)';
+  ctx.fillRect(-hw + 2, lblCY - lblH / 2, (hw - 2) * 2, lblH);
+
+  ctx.fillStyle = powered ? '#78350f' : '#1a2e1a';
+  ctx.font = `bold ${Math.round(w * 0.43)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('ZP', 0, lblCY - lblH * 0.14);
+
+  ctx.fillStyle = powered ? '#b45309' : '#5a7a4e';
+  ctx.font = `${Math.round(w * 0.24)}px sans-serif`;
+  ctx.fillText('60ml', 0, lblCY + lblH * 0.35);
+
+  // ── Screw cap ─────────────────────────────────────────────────────────────
+  ctx.fillStyle = powered ? '#78350f' : '#1a2e1a';
+  ctx.beginPath();
+  ctx.moveTo(-hCapW + 2, topY);
+  ctx.arcTo(hCapW, topY, hCapW, topY + 2, 2);
+  ctx.lineTo(hCapW, capBottomY);
+  ctx.lineTo(-hCapW, capBottomY);
+  ctx.lineTo(-hCapW, topY + 2);
+  ctx.arcTo(-hCapW, topY, -hCapW + 2, topY, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cap gloss
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(-hCapW + 1, topY + 1, hCapW * 0.65, capH - 1);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+// ─── Arc predictor ────────────────────────────────────────────────────────────
+function simulateArc(y: number, vy: number, vx: number, held: boolean, steps: number): { x: number; y: number }[] {
+  const pts: { x: number; y: number }[] = [];
+  const groundTarget = GROUND_Y - 50;
+  let sx = 0;
+  let sy = y, svy = vy, svx = vx;
+  for (let i = 0; i < steps; i++) {
+    const rising = svy < 0;
+    const g = rising && held ? GRAVITY_HOLD : rising ? GRAVITY_RISE : GRAVITY_FALL;
+    svy = Math.min(svy + g, TERMINAL_VELOCITY);
+    sy += svy;
+    sx += svx;
+    svx *= 0.97;
+    if (sy >= groundTarget) { pts.push({ x: sx, y: groundTarget }); break; }
+    pts.push({ x: sx, y: sy });
+  }
+  return pts;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 interface GameCanvasProps {
-  onGameEnd: (score: number, collected: Record<IngredientType, number>, won: boolean) => void;
+  onGameEnd: (score: number, collected: Record<IngredientType, number>, won: boolean, drinks: number) => void;
 }
+
+const EMPTY_COLLECTED: Record<IngredientType, number> = {
+  orange: 0, lemon: 0, ginger: 0, amla: 0, beetroot: 0,
+};
 
 export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // All mutable game state in refs — never trigger re-renders
   const playerRef         = useRef<PlayerState>(createPlayer(GROUND_Y));
   const obstaclesRef      = useRef<Obstacle[]>([]);
   const ingredientsRef    = useRef<Ingredient[]>([]);
   const particlesRef      = useRef<Particle[]>([]);
-  const speedRef          = useRef(2.0);
+  const speedRef          = useRef(1.8);
   const frameRef          = useRef(0);
   const scoreRef          = useRef(0);
-  const collectedRef      = useRef<Record<IngredientType, number>>({ orange: 0, ginger: 0, amla: 0 });
-  const totalCollectedRef = useRef(0);
+  const collectedRef      = useRef<Record<IngredientType, number>>({ ...EMPTY_COLLECTED });
+  const totalRef          = useRef(0);       // juice-meter fills in current round
+  const drinksRef         = useRef(0);       // completed drink cycles
   const activeRef         = useRef(true);
 
-  // Input state
-  const jumpHeldRef    = useRef(false);
-  const jumpBufferRef  = useRef(0); // frames of buffered jump remaining
+  // Input
+  const jumpHeldRef   = useRef(false);
+  const jumpBufferRef = useRef(0);
 
   // Visual FX
-  const shakeRef       = useRef(0);    // current screen shake magnitude
-  const squashRef      = useRef(1.0);  // y-scale spring value (1 = normal)
-  const squashVelRef   = useRef(0.0);  // spring velocity
+  const shakeRef      = useRef(0);
+  const squashRef     = useRef(1.0);
+  const squashVelRef  = useRef(0.0);
 
-  // Distance-based spawn counters (count down by `speed` each frame)
-  const distToObstRef  = useRef(getObstacleGap(0));
-  const distToIngRef   = useRef(getIngredientGap(0));
+  // Power timers
+  const gingerTimerRef = useRef(0);
+  const gingerFlashRef = useRef(0);
+  const drinkFlashRef  = useRef(0);
 
-  // Cloud layers for parallax (each has independent speed)
+  // Spawning
+  const distObstRef = useRef(getObstacleGap(0));
+  const distIngRef  = useRef(getIngredientGap(0));
+
+  // Clouds
   const cloudsRef = useRef([
     { x: 70,  y: 26, w: 65, spd: 0.18 },
     { x: 260, y: 44, w: 50, spd: 0.23 },
@@ -134,40 +285,31 @@ export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
   ]);
 
   const hudTickRef = useRef(0);
-
   const [hudData, setHudData] = useState({
-    score: 0,
-    lives: 3,
-    juiceMeter: 0,
-    collected: { orange: 0, ginger: 0, amla: 0 } as Record<IngredientType, number>,
+    score: 0, lives: 3, juiceMeter: 0, gingerTimer: 0,
+    collected: { ...EMPTY_COLLECTED }, drinks: 0,
   });
 
   const { checkAABB, shrinkRect } = useCollision();
 
-  // ── Input handlers ──────────────────────────────────────────────────────────
-  const triggerJump = useCallback(() => {
-    jumpBufferRef.current = JUMP_BUFFER_FRAMES;
-  }, []);
+  // ── Input ────────────────────────────────────────────────────────────────────
+  const triggerJump = useCallback(() => { jumpBufferRef.current = JUMP_BUFFER_FRAMES; }, []);
 
   useEffect(() => {
-    const onDown = (e: KeyboardEvent) => {
+    const dn = (e: KeyboardEvent) => {
       if (e.code !== 'Space' && e.code !== 'ArrowUp') return;
-      e.preventDefault();
-      jumpHeldRef.current = true;
+      e.preventDefault(); jumpHeldRef.current = true;
       if (!e.repeat) triggerJump();
     };
-    const onUp = (e: KeyboardEvent) => {
+    const up = (e: KeyboardEvent) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') jumpHeldRef.current = false;
     };
-    window.addEventListener('keydown', onDown);
-    window.addEventListener('keyup', onUp);
-    return () => {
-      window.removeEventListener('keydown', onDown);
-      window.removeEventListener('keyup', onUp);
-    };
+    window.addEventListener('keydown', dn);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', dn); window.removeEventListener('keyup', up); };
   }, [triggerJump]);
 
-  // ── Main tick ───────────────────────────────────────────────────────────────
+  // ── Tick ─────────────────────────────────────────────────────────────────────
   const tick = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -175,89 +317,102 @@ export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
 
     frameRef.current++;
     const frame = frameRef.current;
-    scoreRef.current = Math.floor(frame / 6);
-    const score = scoreRef.current;
 
-    speedRef.current = getSpeedForScore(score);
+    // Time-based score drives difficulty; drink bonuses added for display only
+    const timeScore = Math.floor(frame / 6);
+    scoreRef.current = timeScore + drinksRef.current * 500;
+
+    speedRef.current = getSpeedForScore(timeScore);
     const speed = speedRef.current;
 
-    // ── Player: jump buffer execution ────────────────────────────────────────
+    // Tick timers
+    if (gingerTimerRef.current > 0) gingerTimerRef.current--;
+    if (gingerFlashRef.current > 0) gingerFlashRef.current--;
+    if (drinkFlashRef.current  > 0) drinkFlashRef.current--;
+    const isPowered = gingerTimerRef.current > 0;
+
+    // ── Player ────────────────────────────────────────────────────────────────
     let p = playerRef.current;
     const wasGrounded = p.isGrounded;
 
     if (jumpBufferRef.current > 0 && p.isGrounded) {
       jumpBufferRef.current = 0;
-      squashVelRef.current = 0.28; // upward stretch on takeoff
-      p = { ...p, vy: JUMP_FORCE, isGrounded: false };
+      squashVelRef.current = 0.26;
+      p = { ...p, vy: JUMP_FORCE, vx: JUMP_VX, isGrounded: false };
     }
     jumpBufferRef.current = Math.max(0, jumpBufferRef.current - 1);
 
-    // ── Player: asymmetric gravity ────────────────────────────────────────────
     const rising = p.vy < 0;
-    const gravity = rising && jumpHeldRef.current
-      ? GRAVITY_HOLD   // floaty — jump key held during ascent
-      : rising
-      ? GRAVITY_RISE   // normal rise
-      : GRAVITY_FALL;  // fast fall
+    const g = rising && jumpHeldRef.current ? GRAVITY_HOLD : rising ? GRAVITY_RISE : GRAVITY_FALL;
+    const newVy = Math.min(p.vy + g, TERMINAL_VELOCITY);
 
-    const newVy = Math.min(p.vy + gravity, TERMINAL_VELOCITY);
+    const groundTarget = GROUND_Y - p.height;
     let newY = p.y + newVy;
     let finalVy = newVy;
     let grounded = false;
 
-    const groundTarget = GROUND_Y - p.height;
     if (newY >= groundTarget) {
       newY = groundTarget;
       finalVy = 0;
       grounded = true;
-      // Landing: inject squash proportional to impact velocity
-      if (!wasGrounded) {
-        squashVelRef.current = -(Math.abs(p.vy) * 0.028 + 0.18);
-      }
+      if (!wasGrounded) squashVelRef.current = -(Math.abs(p.vy) * 0.030 + 0.15);
+    }
+
+    let newX = p.x;
+    let newVx = p.vx;
+    if (!grounded) {
+      newX = Math.min(p.x + p.vx, p.baseX + PLAYER_MAX_FORWARD);
+      newVx = p.vx * 0.97;
+    } else {
+      if (p.x > p.baseX) newX = Math.max(p.baseX, p.x - RETURN_SPEED);
+      newVx = 0;
     }
 
     const newHurtTimer = Math.max(0, p.hurtTimer - 1);
-    p = { ...p, y: newY, vy: finalVy, isGrounded: grounded, hurtTimer: newHurtTimer, isHurt: newHurtTimer > 0 };
+    p = { ...p, x: newX, vx: newVx, y: newY, vy: finalVy,
+          isGrounded: grounded, hurtTimer: newHurtTimer, isHurt: newHurtTimer > 0 };
     playerRef.current = p;
 
-    // ── Squash/stretch spring ─────────────────────────────────────────────────
-    // Spring: F = stiffness * (target - current); damping prevents oscillation
     squashVelRef.current += (1 - squashRef.current) * 0.28;
     squashRef.current    += squashVelRef.current;
     squashVelRef.current *= 0.68;
-    squashRef.current = Math.max(0.62, Math.min(1.42, squashRef.current));
+    squashRef.current = Math.max(0.65, Math.min(1.38, squashRef.current));
 
-    // ── Distance-based entity spawning ────────────────────────────────────────
-    distToObstRef.current -= speed;
-    distToIngRef.current  -= speed;
-
-    if (distToObstRef.current <= 0) {
+    // ── Spawn ─────────────────────────────────────────────────────────────────
+    distObstRef.current -= speed;
+    distIngRef.current  -= speed;
+    if (distObstRef.current <= 0) {
       obstaclesRef.current = [...obstaclesRef.current, createObstacle(CANVAS_W, GROUND_Y)];
-      distToObstRef.current = getObstacleGap(score);
+      distObstRef.current = getObstacleGap(timeScore);
     }
-    if (distToIngRef.current <= 0) {
+    if (distIngRef.current <= 0) {
       ingredientsRef.current = [...ingredientsRef.current, createIngredient(CANVAS_W, GROUND_Y)];
-      distToIngRef.current = getIngredientGap(score);
+      distIngRef.current = getIngredientGap(timeScore);
     }
 
-    // ── Move entities ─────────────────────────────────────────────────────────
+    // ── Move ──────────────────────────────────────────────────────────────────
     obstaclesRef.current   = updateObstacles(obstaclesRef.current, speed);
     ingredientsRef.current = updateIngredients(ingredientsRef.current, speed);
 
     // ── Collision ─────────────────────────────────────────────────────────────
-    const hitbox = shrinkRect(p, 9);
+    const playerHitbox = shrinkRect(p, isPowered ? 7 : 5);
 
     if (!p.isHurt) {
       for (const obs of obstaclesRef.current) {
-        if (checkAABB(hitbox, obs)) {
+        if (checkAABB(playerHitbox, shrinkRect(obs, 6))) {
           const newLives = p.lives - 1;
           playerRef.current = { ...playerRef.current, lives: newLives, isHurt: true, hurtTimer: HURT_FRAMES };
           obstaclesRef.current = obstaclesRef.current.filter(o => o.id !== obs.id);
-          shakeRef.current = 10;
-          spawnHitBurst(particlesRef.current, p.x + p.width / 2, p.y + p.height / 2);
+          shakeRef.current = 8;
+          hitBurst(particlesRef.current, p.x + p.width / 2, p.y + p.height / 2);
           if (newLives <= 0) {
             activeRef.current = false;
-            onGameEnd(scoreRef.current, { ...collectedRef.current }, false);
+            onGameEnd(
+              scoreRef.current,
+              { ...collectedRef.current },
+              drinksRef.current > 0,   // won = completed at least one drink
+              drinksRef.current,
+            );
             return;
           }
           break;
@@ -265,44 +420,55 @@ export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
       }
     }
 
-    const nextIngredients: Ingredient[] = [];
+    const nextIng: Ingredient[] = [];
     for (const ing of ingredientsRef.current) {
-      if (!ing.collected && checkAABB(hitbox, ing)) {
+      if (!ing.collected && checkAABB(playerHitbox, ing)) {
         collectedRef.current = {
           ...collectedRef.current,
           [ing.type]: collectedRef.current[ing.type] + 1,
         };
-        totalCollectedRef.current++;
-        spawnPickupBurst(particlesRef.current, ing.x + ing.width / 2, ing.y + ing.height / 2, INGREDIENT_COLORS[ing.type]);
-        if (totalCollectedRef.current >= INGREDIENTS_TO_WIN) {
-          activeRef.current = false;
-          onGameEnd(scoreRef.current, { ...collectedRef.current }, true);
-          return;
+
+        if (ing.isSuper) {
+          gingerTimerRef.current = GINGER_POWER_FRAMES;
+          gingerFlashRef.current = 70;
+          gingerBurst(particlesRef.current, p.x + p.width / 2, p.y + p.height / 2);
+          totalRef.current += 1 + GINGER_JUICE_BONUS;
+          shakeRef.current = 3;
+        } else {
+          burst(particlesRef.current, ing.x + ing.width / 2, ing.y + ing.height / 2, ING_COLORS[ing.type]);
+          totalRef.current++;
+        }
+
+        // Drink complete — reset meter and continue playing
+        if (totalRef.current >= INGREDIENTS_TO_WIN) {
+          drinksRef.current++;
+          totalRef.current = 0;
+          collectedRef.current = { ...EMPTY_COLLECTED };
+          drinkFlashRef.current = 90;
+          shakeRef.current = 6;
+          drinkBurst(particlesRef.current, p.x + p.width / 2, p.y + p.height / 2);
         }
       } else {
-        nextIngredients.push(ing);
+        nextIng.push(ing);
       }
     }
-    ingredientsRef.current = nextIngredients;
+    ingredientsRef.current = nextIng;
 
-    // ── Update particles ──────────────────────────────────────────────────────
+    // ── Particles ─────────────────────────────────────────────────────────────
     particlesRef.current = particlesRef.current
-      .map(pt => ({ ...pt, x: pt.x + pt.vx, y: pt.y + pt.vy, vy: pt.vy + 0.14, life: pt.life - 1 }))
+      .map(pt => ({ ...pt, x: pt.x+pt.vx, y: pt.y+pt.vy, vy: pt.vy+0.13, life: pt.life-1 }))
       .filter(pt => pt.life > 0);
+    if (p.isGrounded && frame % 5 === 0) dust(particlesRef.current, p.x, GROUND_Y);
 
-    // Running dust (every 5 frames while grounded)
-    if (p.isGrounded && frame % 5 === 0) {
-      spawnDust(particlesRef.current, p.x, GROUND_Y);
-    }
-
-    // ── HUD update (throttled to every 10 frames) ─────────────────────────────
-    hudTickRef.current++;
-    if (hudTickRef.current % 10 === 0) {
+    // ── HUD ───────────────────────────────────────────────────────────────────
+    if (++hudTickRef.current % 10 === 0) {
       setHudData({
-        score: scoreRef.current,
-        lives: playerRef.current.lives,
-        juiceMeter: calcJuiceMeter(totalCollectedRef.current, INGREDIENTS_TO_WIN),
-        collected: { ...collectedRef.current },
+        score:      scoreRef.current,
+        lives:      playerRef.current.lives,
+        juiceMeter: calcJuiceMeter(totalRef.current, INGREDIENTS_TO_WIN),
+        gingerTimer: gingerTimerRef.current,
+        collected:  { ...collectedRef.current },
+        drinks:     drinksRef.current,
       });
     }
 
@@ -311,52 +477,71 @@ export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
     // ╚═══════════════════════════════════════════════════════════════════════╝
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Screen shake — decay and apply as translate offset
-    shakeRef.current *= 0.82;
+    shakeRef.current *= 0.80;
     const ox = shakeRef.current > 0.5 ? (Math.random() - 0.5) * shakeRef.current : 0;
     const oy = shakeRef.current > 0.5 ? (Math.random() - 0.5) * shakeRef.current * 0.4 : 0;
-
     ctx.save();
     ctx.translate(ox, oy);
 
     // Sky gradient
     const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-    sky.addColorStop(0, '#d9f0d6');
-    sky.addColorStop(0.55, '#eef7eb');
-    sky.addColorStop(1, '#f8f5ef');
+    if (isPowered) {
+      sky.addColorStop(0, '#fef9c3');
+      sky.addColorStop(0.6, '#fef3c7');
+      sky.addColorStop(1, '#fffbeb');
+    } else {
+      sky.addColorStop(0, '#d9f0d6');
+      sky.addColorStop(0.55, '#eef7eb');
+      sky.addColorStop(1, '#f8f5ef');
+    }
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Parallax clouds — each layer moves at its own speed
+    // Parallax clouds — three overlapping circles per cloud
     cloudsRef.current = cloudsRef.current.map(cloud => {
       const x = cloud.x - speed * cloud.spd;
       const r = cloud.w;
-      ctx.fillStyle = 'rgba(255,255,255,0.74)';
+      ctx.fillStyle = isPowered ? 'rgba(255,251,235,0.80)' : 'rgba(255,255,255,0.74)';
       ctx.beginPath();
-      ctx.ellipse(x,                cloud.y,     r,           r * 0.30, 0, 0, Math.PI * 2);
-      ctx.ellipse(x - r * 0.38,     cloud.y + 5, r * 0.58,    r * 0.22, 0, 0, Math.PI * 2);
-      ctx.ellipse(x + r * 0.38,     cloud.y + 4, r * 0.52,    r * 0.20, 0, 0, Math.PI * 2);
+      ctx.arc(x,            cloud.y,     r,        0, Math.PI * 2);
+      ctx.arc(x - r * 0.38, cloud.y + 5, r * 0.58, 0, Math.PI * 2);
+      ctx.arc(x + r * 0.38, cloud.y + 4, r * 0.52, 0, Math.PI * 2);
       ctx.fill();
       return { ...cloud, x: x < -(r + 20) ? CANVAS_W + r + 20 : x };
     });
 
     // Ground
-    ctx.fillStyle = '#c5e0bf';
+    ctx.fillStyle = isPowered ? '#d97706' : '#c5e0bf';
     ctx.fillRect(0, GROUND_Y, CANVAS_W, 3);
-    ctx.fillStyle = '#e8f5e4';
+    ctx.fillStyle = isPowered ? '#fef3c7' : '#e8f5e4';
     ctx.fillRect(0, GROUND_Y + 3, CANVAS_W, CANVAS_H - GROUND_Y - 3);
 
-    // Ground speed-lines (parallax dashes that show how fast the world moves)
-    ctx.fillStyle = '#b2d4ac';
+    // Ground speed dashes
+    ctx.fillStyle = isPowered ? '#fbbf24' : '#b2d4ac';
     for (let i = 0; i < 10; i++) {
       const dashX = ((frame * speed * 0.55) + i * 88) % (CANVAS_W + 80) - 40;
       ctx.fillRect(dashX, GROUND_Y + 9, 40 + (i % 3) * 14, 2);
     }
 
-    // ── Particles (behind entities) ───────────────────────────────────────────
+    // Obstacle warning glow
+    for (const obs of obstaclesRef.current) {
+      const dist = obs.x - (p.x + p.width);
+      if (dist > 0 && dist < WARN_DIST) {
+        const t = 1 - dist / WARN_DIST;
+        const gx = obs.x + obs.width / 2;
+        const gy = obs.y + obs.height / 2;
+        const grd = ctx.createRadialGradient(gx, gy, 4, gx, gy, 38);
+        grd.addColorStop(0, `rgba(251,146,60,${0.5 * t})`);
+        grd.addColorStop(1, 'rgba(251,146,60,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(obs.x - 18, obs.y - 18, obs.width + 36, obs.height + 36);
+      }
+    }
+
+    // Particles
     for (const pt of particlesRef.current) {
-      const alpha = (pt.life / pt.maxLife) * 0.88;
-      ctx.globalAlpha = alpha;
+      const a = (pt.life / pt.maxLife) * 0.88;
+      ctx.globalAlpha = a;
       ctx.fillStyle = pt.color;
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, pt.size * (pt.life / pt.maxLife), 0, Math.PI * 2);
@@ -364,7 +549,7 @@ export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
     }
     ctx.globalAlpha = 1;
 
-    // ── Obstacles ─────────────────────────────────────────────────────────────
+    // Obstacles
     ctx.font = '30px serif';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
@@ -372,43 +557,118 @@ export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
       ctx.fillText(obs.emoji, obs.x, obs.y + obs.height / 2);
     }
 
-    // ── Ingredients — bob + scale pulse ───────────────────────────────────────
+    // Ingredients — bob + pulse, ginger gets a halo
     for (const ing of ingredientsRef.current) {
       const bob = Math.sin(frame * 0.07 + ing.id * 1.1) * 5;
-      const pulse = 1 + Math.sin(frame * 0.1 + ing.id * 0.8) * 0.06;
-      const cx = ing.x + ing.width / 2;
-      const cy = ing.y + ing.height / 2 + bob;
+      const pulse = ing.isSuper
+        ? 1 + Math.sin(frame * 0.14) * 0.14
+        : 1 + Math.sin(frame * 0.10 + ing.id * 0.8) * 0.06;
+
+      if (ing.isSuper) {
+        const gx = ing.x + ing.width / 2;
+        const gy = ing.y + ing.height / 2 + bob;
+        const halo = ctx.createRadialGradient(gx, gy, 6, gx, gy, 26);
+        halo.addColorStop(0, 'rgba(251,191,36,0.55)');
+        halo.addColorStop(1, 'rgba(251,191,36,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(gx, gy, 26, 0, Math.PI * 2); ctx.fill();
+      }
+
       ctx.save();
-      ctx.translate(cx, cy);
+      ctx.translate(ing.x + ing.width / 2, ing.y + ing.height / 2 + bob);
       ctx.scale(pulse, pulse);
-      ctx.font = '28px serif';
+      ctx.font = ing.isSuper ? '32px serif' : '26px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(ing.emoji, 0, 0);
       ctx.restore();
     }
 
-    // ── Player — squash/stretch spring + hurt flicker ─────────────────────────
+    // Landing shadow + arc trajectory
+    if (!p.isGrounded) {
+      const heightAbove = GROUND_Y - (p.y + p.height);
+      const prox = Math.max(0, 1 - heightAbove / 120);
+      ctx.save();
+      ctx.globalAlpha = 0.08 + prox * 0.18;
+      ctx.fillStyle = '#1a2e1a';
+      ctx.beginPath();
+      ctx.ellipse(p.x + p.width / 2, GROUND_Y + 2, 14 + prox * 8, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      const arcPts = simulateArc(p.y, p.vy, p.vx, jumpHeldRef.current, 45);
+      ctx.fillStyle = isPowered ? '#d97706' : '#5a7a4e';
+      const baseCX = p.x + p.width / 2;
+      for (let i = 1; i < arcPts.length; i += 3) {
+        ctx.globalAlpha = (1 - i / arcPts.length) * 0.30;
+        ctx.beginPath();
+        ctx.arc(baseCX + arcPts[i].x, arcPts[i].y + p.height / 2, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Shot bottle player ────────────────────────────────────────────────────
     const player = playerRef.current;
     const visible = !player.isHurt || Math.floor(frame / 4) % 2 === 0;
     if (visible) {
       const sq = squashRef.current;
-      // Volume-preserving: wider when squashed, narrower when stretched
-      const scaleX = 1 / Math.sqrt(sq);
-      const scaleY = sq;
-      const cx = player.x + player.width / 2;
-      const cy = player.y + player.height / 2;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.scale(scaleX, scaleY);
-      ctx.font = '36px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🧃', 0, 0);
-      ctx.restore();
+      const tilt = player.isGrounded
+        ? 0
+        : Math.atan2(player.vy, (speed + player.vx) * 4) * 0.28;
+      drawBottle(
+        ctx,
+        player.x + player.width / 2,
+        player.y + player.height / 2,
+        player.width,
+        player.height,
+        tilt,
+        1 / Math.sqrt(sq),
+        sq,
+        isPowered,
+        frame,
+      );
     }
 
-    ctx.restore(); // end screen shake transform
+    // ── Ginger power flash ────────────────────────────────────────────────────
+    if (gingerFlashRef.current > 0) {
+      const t = gingerFlashRef.current;
+      const alpha = Math.min(1, (70 - t) / 10, t / 10);
+      ctx.globalAlpha = alpha;
+      ctx.save();
+      ctx.translate(CANVAS_W / 2, CANVAS_H / 2 - 30);
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = '#fef3c7';
+      ctx.lineWidth = 4;
+      ctx.strokeText('⚡ GINGER POWER!', 0, 0);
+      ctx.fillStyle = '#d97706';
+      ctx.fillText('⚡ GINGER POWER!', 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    // ── Drink complete flash ──────────────────────────────────────────────────
+    if (drinkFlashRef.current > 0) {
+      const t = drinkFlashRef.current;
+      const alpha = Math.min(1, (90 - t) / 12, t / 12);
+      ctx.globalAlpha = alpha;
+      ctx.save();
+      ctx.translate(CANVAS_W / 2, CANVAS_H / 2 - 30);
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = '#dcfce7';
+      ctx.lineWidth = 5;
+      ctx.strokeText(`🍶 DRINK #${drinksRef.current} COMPLETE!  +500`, 0, 0);
+      ctx.fillStyle = '#15803d';
+      ctx.fillText(`🍶 DRINK #${drinksRef.current} COMPLETE!  +500`, 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore(); // end shake transform
   }, [checkAABB, shrinkRect, onGameEnd]);
 
   useGameLoop(tick, true);
@@ -422,13 +682,8 @@ export default function GameCanvas({ onGameEnd }: GameCanvasProps) {
       onMouseUp={() => { jumpHeldRef.current = false; }}
       style={{ cursor: 'pointer' }}
     >
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_W}
-        height={CANVAS_H}
-        className="w-full block"
-        style={{ touchAction: 'none' }}
-      />
+      <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H}
+        className="w-full block" style={{ touchAction: 'none' }} />
       <GameHUD {...hudData} />
     </div>
   );

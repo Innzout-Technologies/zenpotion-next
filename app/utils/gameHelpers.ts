@@ -2,6 +2,7 @@ import type { IngredientType } from '../components/game/Ingredients';
 
 export interface ProductRecommendation {
   name: string;
+  size: string;     // e.g. "60ml"
   tagline: string;
   benefits: string[];
   color: string;
@@ -10,32 +11,52 @@ export interface ProductRecommendation {
 
 const PRODUCT_MAP: Record<string, ProductRecommendation> = {
   orange: {
-    name: 'ZenPotion Citrus Burst',
-    tagline: 'Vitamin C boost for everyday vitality',
+    name: 'ZenPotion Citrus Shot',
+    size: '60ml',
+    tagline: 'Vitamin C immunity shot — fresh-pressed orange',
     benefits: ['Boosts immunity', 'Glowing skin', 'Natural energy lift'],
     color: '#f97316',
-    slug: 'citrus-burst',
+    slug: 'citrus-shot',
+  },
+  lemon: {
+    name: 'ZenPotion Lemon Detox Shot',
+    size: '60ml',
+    tagline: 'Alkalising detox shot — zesty & refreshing',
+    benefits: ['Aids detoxification', 'Alkalises the body', 'Digestive support'],
+    color: '#eab308',
+    slug: 'lemon-detox-shot',
   },
   ginger: {
-    name: 'ZenPotion Ginger Zing',
-    tagline: 'Spiced warmth for gut health and digestion',
-    benefits: ['Aids digestion', 'Anti-inflammatory', 'Warming daily energy'],
+    name: 'ZenPotion Ginger Power Shot',
+    size: '60ml',
+    tagline: 'Super-charged immunity shot — the original wellness hero',
+    benefits: ['Anti-inflammatory', 'Gut health + digestion', 'Warming natural energy'],
     color: '#d97706',
-    slug: 'ginger-zing',
+    slug: 'ginger-power-shot',
   },
   amla: {
-    name: 'ZenPotion Amla Shield',
-    tagline: 'Antioxidant-rich ancient immunity tonic',
-    benefits: ['Antioxidant boost', 'Hair & skin health', 'Immunity shield'],
+    name: 'ZenPotion Amla Shield Shot',
+    size: '60ml',
+    tagline: 'Antioxidant-rich ancient Ayurvedic tonic',
+    benefits: ['Antioxidant powerhouse', 'Hair & skin health', 'Immunity shield'],
     color: '#16a34a',
-    slug: 'amla-shield',
+    slug: 'amla-shield-shot',
+  },
+  beetroot: {
+    name: 'ZenPotion Beet Energy Shot',
+    size: '60ml',
+    tagline: 'Natural nitrate shot for stamina and vitality',
+    benefits: ['Boosts stamina', 'Supports blood health', 'Pre-workout energy'],
+    color: '#be185d',
+    slug: 'beet-energy-shot',
   },
   default: {
-    name: 'ZenPotion Original',
-    tagline: 'Clean hydration for modern India',
+    name: 'ZenPotion Original Shot',
+    size: '60ml',
+    tagline: 'Clean daily wellness — zero sugar, real ingredients',
     benefits: ['Zero added sugar', 'Natural ingredients', 'Daily vitality'],
     color: '#5a7a4e',
-    slug: 'original',
+    slug: 'original-shot',
   },
 };
 
