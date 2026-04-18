@@ -14,15 +14,12 @@ const ingredients = [
 
 export default function ParallaxSection() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start end', 'end start'],
-  });
+  const { scrollYProgress } = useScroll({});
 
   // Layer speeds
   const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
   const midY = useTransform(scrollYProgress, [0, 1], ['0%', '-20%']);
-  const fgY = useTransform(scrollYProgress, [0, 1], ['0%', '-40%']);
+  const fgY = useTransform(scrollYProgress, [0, 1], ['30%', '-40%']);
   const fgScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.9, 1, 1.05]);
   const textY = useTransform(scrollYProgress, [0, 1], ['20px', '-60px']);
   const textOpacity = useTransform(scrollYProgress, [0, 0.2, 0.7, 1], [0, 1, 1, 0]);
@@ -70,7 +67,7 @@ export default function ParallaxSection() {
       {/* ─── Layer 2: Mid ingredients (medium speed) ─── */}
       <motion.div
         style={{ y: midY }}
-        className="absolute inset-0 z-10 pointer-events-none"
+        className="absolute bottom-0 left-0 w-full h-[65%] z-10 pointer-events-none"
       >
         {ingredients.map((item, i) => (
           <motion.div
